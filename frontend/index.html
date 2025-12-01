@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DermaScan AI — Skin Type</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* small extras beyond tailwind for the hero glow */
+    .hero-bg {
+      background: radial-gradient(1000px 600px at 50% 20%, rgba(106, 90, 255, 0.18), transparent 18%),
+                  linear-gradient(180deg, #0f1724 0%, #071226 100%);
+    }
+    .glass {
+      background: rgba(255,255,255,0.03);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+  </style>
+</head>
+<body class="min-h-screen hero-bg text-white antialiased">
+
+  <div class="max-w-4xl mx-auto px-6 py-12">
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-12">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center shadow-lg">
+          <!-- simple logo -->
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M4 12h16" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M12 4v16" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="font-semibold text-lg leading-none">DermaScan AI</div>
+          <div class="text-xs text-slate-300">Powered by MobileNetV2</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 text-sm text-slate-300">
+        <span class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-emerald-400 block"></span>
+          <span>System Ready</span>
+        </span>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <main class="text-center py-12">
+      <h1 class="text-5xl font-extrabold leading-tight mb-4">
+        Discover Your <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-violet-400">True Skin Type</span>
+      </h1>
+      <p class="max-w-2xl mx-auto text-slate-300 mb-10">
+        Connects to your local API to analyze texture, oiliness and pore density in real-time.
+      </p>
+
+      <!-- Primary actions -->
+      <div class="max-w-2xl mx-auto space-y-4">
+        <button id="openCameraBtn" class="w-full py-4 rounded-xl text-lg font-medium shadow-xl glass border border-white/6 hover:scale-[1.01] transition-transform flex items-center justify-center gap-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h4l2-2h4l2 2h4v10H4V7z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Open Camera
+        </button>
+
+        <label for="fileInput" class="cursor-pointer block w-full">
+          <div class="w-full py-4 rounded-xl text-lg font-medium text-slate-200 bg-transparent border border-white/10 hover:bg-white/5 transition flex items-center justify-center gap-3">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Upload Photo
+          </div>
+        </label>
+      </div>
+    </main>
+
+    <!-- Footer small -->
+    <div class="mt-12 text-center text-xs text-slate-400">
+      Local & offline processing. Keep camera permissions enabled for capture.
+    </div>
+  </div>
+
+  <!-- Hidden file input -->
+  <input id="fileInput" type="file" accept="image/*" class="hidden" />
+
+  <!-- Modal / Camera Overlay -->
+  <div id="cameraModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 p-4">
+    <div class="bg-[#071226] rounded-2xl overflow-hidden max-w-3xl w-full shadow-2xl">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/6">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 7h4l2-2h4l2 2h4v10H4V7z" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <div class="text-sm font-medium">Camera</div>
+            <div id="camStatus" class="text-xs text-slate-400">Ready</div>
+          </div>
+        </div>
+        <div class="flex gap-2 items-center">
+          <button id="closeModalBtn" class="text-slate-300 hover:text-white">Close ✕</button>
+        </div>
+      </div>
+
+      <div class="p-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="bg-black rounded-lg overflow-hidden">
+            <video id="video" autoplay playsinline class="w-full h-80 object-cover bg-black"></video>
+          </div>
+
+          <div class="flex flex-col gap-3">
+            <img id="capturePreview" class="w-full h-52 object-contain rounded-lg bg-black hidden" alt="preview" />
+            <div id="result" class="min-h-[120px] p-3 rounded-lg glass border border-white/6 text-slate-200">
+              <div id="resultContent" class="text-sm text-slate-300">No prediction yet.</div>
+            </div>
+
+            <div class="flex gap-2 mt-auto">
+              <button id="startBtn" class="flex-1 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-600">Start Camera</button>
+              <button id="captureBtn" class="flex-1 py-3 rounded-lg bg-cyan-500 hover:bg-cyan-600">Capture</button>
+              <button id="stopBtn" class="flex-1 py-3 rounded-lg bg-red-500 hover:bg-red-600">Stop</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Result container (used by file upload) -->
+  <div id="uploadResultContainer" class="max-w-2xl mx-auto mt-8 hidden">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+        <div class="bg-black rounded-lg overflow-hidden">
+            <img id="uploadPreview" class="w-full h-80 object-contain rounded-lg bg-black" alt="upload preview" />
+        </div>
+        <div id="uploadResult" class="min-h-[120px] p-3 rounded-lg glass border border-white/6 text-slate-200">
+            <!-- Results will be injected here -->
+        </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://localhost:8000"; // change if needed
+
+    // DOM
+    const openCameraBtn = document.getElementById("openCameraBtn");
+    const cameraModal = document.getElementById("cameraModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const captureBtn = document.getElementById("captureBtn");
+    const video = document.getElementById("video");
+    const capturePreview = document.getElementById("capturePreview");
+    const resultContent = document.getElementById("resultContent");
+    const camStatus = document.getElementById("camStatus");
+    const fileInput = document.getElementById("fileInput");
+    const uploadResultContainer = document.getElementById("uploadResultContainer");
+    const uploadPreview = document.getElementById("uploadPreview");
+    const uploadResult = document.getElementById("uploadResult");
+
+    let stream = null;
+
+    openCameraBtn.addEventListener("click", () => {
+      cameraModal.classList.remove("hidden");
+      cameraModal.classList.add("flex");
+    });
+    closeModalBtn.addEventListener("click", () => {
+      cameraModal.classList.add("hidden");
+      uploadResultContainer.classList.add("hidden"); // Hide file result if open
+      stopCamera();
+    });
+
+    startBtn.addEventListener("click", async () => {
+      camStatus.textContent = "Starting camera...";
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
+        video.srcObject = stream;
+        camStatus.textContent = "Camera active";
+      } catch (e) {
+        console.error("getUserMedia:", e);
+        camStatus.textContent = "Camera permission denied or unavailable";
+      }
+    });
+
+    stopBtn.addEventListener("click", () => {
+      stopCamera();
+      camStatus.textContent = "Stopped";
+    });
+
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+        video.srcObject = null;
+      }
+    }
+
+    function formatPredictionResult(data) {
+        let outputHtml = `<div class="text-white font-medium mb-2">Prediction: <span class="text-cyan-300">${data.predicted_skin_type}</span></div>`;
+
+        if (data.probabilities) {
+            // Sort probabilities from highest to lowest
+            const sortedProbs = Object.entries(data.probabilities).sort(([, a], [, b]) => b - a);
+
+            outputHtml += '<ul class="text-sm text-slate-300 space-y-1">';
+            for (const [skinType, probability] of sortedProbs) {
+                const percentage = (probability * 100).toFixed(1);
+                // Highlight the top prediction
+                if (skinType === data.predicted_skin_type) {
+                    outputHtml += `<li class="font-semibold text-white">${skinType}: ${percentage}%</li>`;
+                } else {
+                    outputHtml += `<li>${skinType}: ${percentage}%</li>`;
+                }
+            }
+            outputHtml += '</ul>';
+        }
+
+        if (data.lighting_ok === false) {
+            outputHtml += `<div class="text-yellow-400 text-xs mt-2">Warning: Lighting may be poor, affecting accuracy.</div>`;
+        }
+        return outputHtml;
+    }
+
+    captureBtn.addEventListener("click", async () => {
+      resultContent.textContent = "Capturing...";
+      if (!stream) {
+        resultContent.textContent = "Camera is not running. Press Start Camera.";
+        return;
+      }
+
+      // capture frame
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // preview
+      capturePreview.src = canvas.toDataURL("image/jpeg", 0.9);
+      capturePreview.classList.remove("hidden");
+
+      resultContent.textContent = "Uploading...";
+
+      try {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.9));
+        if (!blob) throw new Error("Capture failed");
+
+        const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+        const fd = new FormData();
+        fd.append("file", file);
+
+        const resp = await fetch(`${API_BASE}/skin/predict`, { method: "POST", body: fd });
+        const text = await resp.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = text; }
+
+        if (!resp.ok) {
+          resultContent.innerHTML = `<div class="text-red-400">Server error (${resp.status})</div><pre class="text-xs text-slate-300">${JSON.stringify(data)}</pre>`;
+          return;
+        }
+
+        // show result nicely
+        resultContent.innerHTML = formatPredictionResult(data);
+      } catch (err) {
+        console.error(err);
+        resultContent.innerHTML = `<div class="text-red-400">Capture/upload failed</div><div class="text-xs text-slate-300">${err.message}</div>`;
+      }
+    });
+
+    // file upload flow
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      uploadResultContainer.classList.remove("hidden");
+      uploadResult.innerHTML = "Uploading file...";
+
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        const resp = await fetch(`${API_BASE}/skin/predict`, { method: "POST", body: fd });
+        const text = await resp.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = text; }
+
+        if (!resp.ok) {
+          uploadResult.innerHTML = `<div class="text-red-400">Server error (${resp.status})</div><pre class="text-xs text-slate-300">${JSON.stringify(data)}</pre>`;
+          return;
+        }
+
+        uploadPreview.src = URL.createObjectURL(file);
+        uploadResult.innerHTML = formatPredictionResult(data);
+      } catch (err) {
+        console.error(err);
+        uploadResult.innerHTML = `<div class="text-red-400">Upload failed</div><div class="text-xs text-slate-300">${err.message}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>
